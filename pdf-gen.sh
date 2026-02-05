@@ -2,6 +2,23 @@
 # pdf-gen.sh - Generate a PDF file of specified size
 # Usage: ./pdf-gen.sh <output-file> <size-in-kb>
 
+# Function to pad PDF file to desired size using PDF comments
+pad_pdf_file() {
+    local file="$1"
+    local target_kb="$2"
+    local current_size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null)
+    local target_size=$((target_kb * 1024))
+    
+    if [ $current_size -lt $target_size ]; then
+        local padding_size=$((target_size - current_size))
+        # Add padding as PDF comments (valid PDF content)
+        # PDF comments start with % and go to end of line
+        printf '\n%%%% Padding: ' >> "$file"
+        head -c $((padding_size - 15)) /dev/zero | tr '\0' 'X' >> "$file"
+        printf '\n' >> "$file"
+    fi
+}
+
 # Default values
 OUTPUT_FILE="output.pdf"
 SIZE_KB=100
@@ -90,12 +107,7 @@ startxref
 %%EOF
 EOF
     
-    # Pad the file to reach desired size
-    CURRENT_SIZE=$(stat -f%z "$OUTPUT_FILE" 2>/dev/null || stat -c%s "$OUTPUT_FILE" 2>/dev/null)
-    if [ $CURRENT_SIZE -lt $((SIZE_KB * 1024)) ]; then
-        PADDING_SIZE=$(((SIZE_KB * 1024) - CURRENT_SIZE))
-        dd if=/dev/zero bs=1 count=$PADDING_SIZE 2>/dev/null >> "$OUTPUT_FILE"
-    fi
+    pad_pdf_file "$OUTPUT_FILE" "$SIZE_KB"
     
 else
     # Use ghostscript or imagemagick if available
@@ -105,12 +117,7 @@ else
         convert -size 612x792 xc:white "$OUTPUT_FILE" 2>/dev/null
     fi
     
-    # Pad to desired size if needed
-    CURRENT_SIZE=$(stat -f%z "$OUTPUT_FILE" 2>/dev/null || stat -c%s "$OUTPUT_FILE" 2>/dev/null)
-    if [ $CURRENT_SIZE -lt $((SIZE_KB * 1024)) ]; then
-        PADDING_SIZE=$(((SIZE_KB * 1024) - CURRENT_SIZE))
-        dd if=/dev/zero bs=1 count=$PADDING_SIZE 2>/dev/null >> "$OUTPUT_FILE"
-    fi
+    pad_pdf_file "$OUTPUT_FILE" "$SIZE_KB"
 fi
 
 FINAL_SIZE=$(stat -f%z "$OUTPUT_FILE" 2>/dev/null || stat -c%s "$OUTPUT_FILE" 2>/dev/null)

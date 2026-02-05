@@ -7,11 +7,11 @@ find_and_activate() {
     local search_dir="${1:-.}"
     
     # Find all files named 'activate' in bin directories (common venv structure)
-    local activate_file=$(find "$search_dir" -type f -path "*/bin/activate" 2>/dev/null | head -n 1)
+    local activate_file=$(find "$search_dir" -type f -path "*/bin/activate" -print -quit 2>/dev/null)
     
     if [ -z "$activate_file" ]; then
         # Fallback: search for any file named 'activate'
-        activate_file=$(find "$search_dir" -type f -name "activate" 2>/dev/null | head -n 1)
+        activate_file=$(find "$search_dir" -type f -name "activate" -print -quit 2>/dev/null)
     fi
     
     if [ -n "$activate_file" ]; then
